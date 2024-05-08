@@ -64,7 +64,7 @@ def extract_stopwords(file_path):
                 for line in file:
                     # Split the line based on the pipe character (|)
                     stop_word = line.split('|')[0].strip()  # Extract the stop word and remove leading/trailing spaces
-                    stop_words.add(stop_word)
+                    stop_words.add(stop_word.lower())  # Convert the stop word to lowercase and add it to the set
             return stop_words
         except UnicodeDecodeError:
             pass
@@ -82,17 +82,13 @@ for file_name in os.listdir(stopwords_folder_path):
         stopwords_dict[file_name] = stop_words
 
 # merge stop_words with nltk_stop_words
-# stopwords_dict['nltk_stop_words'] = nltk_stop_words
+stopwords_dict['nltk_stop_words'] = nltk_stop_words
 
 # Now stopwords_dict will contain stop words extracted from each text file
 
 # Converting all words in the 'Title' and 'Text' columns to lowercase
 extracted_data_df['Title'] = extracted_data_df['Title'].str.lower()
 extracted_data_df['Text'] = extracted_data_df['Text'].str.lower()
-
-# Converting all stopwords in the stopwords dictionary to lowercase
-for file_name, stop_words in stopwords_dict.items():
-    stopwords_dict[file_name] = {word.lower() for word in stop_words}
 
 # Function to remove stopwords from text using the dictionary of stopwords
 def remove_stopwords(text, stopwords_dict):
@@ -135,17 +131,15 @@ for file_name, words in positive_and_negative_words_dict.items():
     stopwords_dict[file_name] = {word.lower() for word in words}
 
 # Function to calculate Positive Score
-def calculate_positive_score(text):
-    tokens = nltk.word_tokenize(text)
+def calculate_positive_score(tokens):
     positive_words = positive_and_negative_words_dict.get('positive-words.txt', set())
-    positive_score = sum(1 for token in tokens if token.lower() in positive_words)
+    positive_score = sum(1 for token in tokens if token in positive_words)
     return positive_score
 
 # Function to calculate Negative Score
-def calculate_negative_score(text):
-    tokens = nltk.word_tokenize(text)
+def calculate_negative_score(tokens):
     negative_words = positive_and_negative_words_dict.get('negative-words.txt', set())
-    negative_score = sum(1 for token in tokens if token.lower() in negative_words)
+    negative_score = sum(1 for token in tokens if token in negative_words)
     return negative_score
 
 # Function to calculate Polarity Score
@@ -162,8 +156,8 @@ def calculate_subjectivity_score(positive_score, negative_score, total_words):
 
 # Iterating over each row in the dataframe and calculate variables
 for index, row in extracted_data_df.iterrows():
-    text = row['Text']
-    total_words = len(nltk.word_tokenize(text))
+    text = word_tokenize(row['Text'])
+    total_words = len(text)
     positive_score = calculate_positive_score(text)
     negative_score = calculate_negative_score(text)
     polarity_score = calculate_polarity_score(positive_score, negative_score)
@@ -175,35 +169,11 @@ for index, row in extracted_data_df.iterrows():
     extracted_data_df.at[index, 'Polarity Score'] = polarity_score
     extracted_data_df.at[index, 'Subjectivity Score'] = subjectivity_score
 
-# Function to calculate Average Sentence Length
-def average_sentence_length(text):
-    sentences = sent_tokenize(text)
-    words = word_tokenize(text)
-    return len(words) / len(sentences)
-
-# Function to calculate Percentage of Complex Words
-def percentage_complex_words(text):
-    words = word_tokenize(text)
-    words_no_stopwords = [word for word in words if word not in stop_words and word not in string.punctuation and word not in nltk_stop_words]
-    complex_words = [word for word in words_no_stopwords if textstat.syllable_count(word) > 2]
-
-    complex_word_count = sum(1 for word in words if word in complex_words)
-    return complex_word_count / len(words)
-
-# Function to calculate Fog Index
-def fog_index(avg_sentence_length, percentage_complex_words):
-    return 0.4 * (avg_sentence_length + percentage_complex_words)
-
-# Apply the functions to the DataFrame
-extracted_data_df['Average Sentence Length'] = extracted_data_df['Text'].apply(average_sentence_length)
-extracted_data_df['Percentage of Complex Words'] = extracted_data_df['Text'].apply(lambda x: percentage_complex_words(x))
-extracted_data_df['Fog Index'] = fog_index(extracted_data_df['Average Sentence Length'], extracted_data_df['Percentage of Complex Words'])
-
 # Function to calculate Average Sentence Length, Percentage of Complex Words, Fog Index, Word Count, Syllable Count Per Word, Personal Pronouns Count, Average Word Length
 def calculate_metrics(text):
     sentences = sent_tokenize(text)
     words = word_tokenize(text)
-    words_no_stopwords = [word for word in words if word not in stop_words and word not in string.punctuation and word not in nltk_stop_words]
+    words_no_stopwords = [word for word in words if word not in stop_words and word not in string.punctuation]
     complex_words = [word for word in words_no_stopwords if textstat.syllable_count(word) > 2]
     personal_pronouns = len(re.findall(r'\b(?:I|we|my|ours|us)\b', text, flags=re.IGNORECASE))
 
