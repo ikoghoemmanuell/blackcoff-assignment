@@ -51,6 +51,35 @@ for index, row in url_df.iterrows():
 # Creating a DataFrame from the extracted data
 extracted_data_df = pd.DataFrame(extracted_data)
 
+# Define the directory to save the text files
+save_directory = "extracted_articles"
+
+# Check if the directory exists, if not, create it
+if not os.path.exists(save_directory):
+    os.makedirs(save_directory)
+
+# Iterate over each row in the DataFrame
+for index, row in extracted_data_df.iterrows():
+    # Extract values from the current row
+    url_id, title, text = row['URL_ID'], row['Title'], row['Text']
+
+    # Define the file name with .txt extension
+    file_name = f"{url_id}.txt"
+
+    # Define the content to be written to the file
+    content = f"Title: {title}\nText: {text}"
+
+    # Define the file path including the directory
+    file_path = os.path.join(save_directory, file_name)
+    
+    # Write the content to the text file
+    try:
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(content)
+    except IOError as e:
+        print(f"Unable to write to file {file_path}. Error: {e}")
+
+
 # Defining the path to the folder containing stop words text files
 stopwords_folder_path = 'StopWords-20240507T120351Z-001\StopWords'
 
